@@ -1,0 +1,88 @@
+-- Script farm All Seas V10
+
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Stats = Players.LocalPlayer:WaitForChild("Data"):WaitForChild("Stats")
+
+-- Hàm lấy quest theo level
+local function getQuestInfo(level)
+    if level < 50 then
+        return "BanditQuest", "Bandit"
+    elseif level < 150 then
+        return "MonkeyQuest", "Monkey"
+    elseif level < 300 then
+        return "PirateQuest", "Pirate"
+    else
+        return "BossQuest", "Boss"
+    end
+end
+
+-- Hàm auto equip weapon
+local function forceEquipWeapon(toolName)
+    local char = Players.LocalPlayer.Character
+    if char and char:FindFirstChild("Humanoid") then
+        local tool = char:FindFirstChild(toolName) or Players.LocalPlayer.Backpack:FindFirstChild(toolName)
+        if tool then
+            char.Humanoid:EquipTool(tool)
+        end
+    end
+end
+
+-- Auto add stats
+local function autoAddStats()
+    if Stats.Points.Value > 0 then
+        ReplicatedStorage.Remotes.AddPoint:FireServer("Melee", Stats.Points.Value)
+    end
+end
+
+-- Auto collect chest
+local function autoCollectChests()
+    for _, chest in pairs(workspace:GetChildren()) do
+        if chest.Name:match("Chest") and chest:IsA("Model") then
+            chest.CFrame = Players.LocalPlayer.Character.HumanoidRootPart.CFrame
+        end
+    end
+end
+
+-- Farm loop
+_G.LegitFarm = false
+local function startFarm()
+    while _G.LegitFarm do
+        task.wait(0.3)
+        local level = Stats.Level.Value
+        local quest, enemy = getQuestInfo(level)
+        forceEquipWeapon("Combat")
+        autoAddStats()
+        autoCollectChests()
+        ReplicatedStorage.Remotes.StartQuest:FireServer(quest)
+        ReplicatedStorage.Remotes.AttackEnemy:FireServer(enemy)
+    end
+end
+
+-- Tạo nút ToggleFarmBtn nếu chưa có
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Parent = Players.LocalPlayer:WaitForChild("PlayerGui")
+
+local ToggleFarmBtn = Instance.new("TextButton")
+ToggleFarmBtn.Name = "ToggleFarmBtn"
+ToggleFarmBtn.Parent = ScreenGui
+ToggleFarmBtn.Size = UDim2.new(0, 120, 0, 40)
+ToggleFarmBtn.Position = UDim2.new(0.5, -60, 0.9, 0)
+ToggleFarmBtn.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
+ToggleFarmBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+ToggleFarmBtn.Font = Enum.Font.SourceSansBold
+ToggleFarmBtn.TextSize = 20
+ToggleFarmBtn.Text = "Farm OFF"
+
+-- Kết nối nút với farm loop
+ToggleFarmBtn.MouseButton1Click:Connect(function()
+    _G.LegitFarm = not _G.LegitFarm
+    if _G.LegitFarm then
+        ToggleFarmBtn.BackgroundColor3 = Color3.fromRGB(0, 255, 0)
+        ToggleFarmBtn.Text = "Farm ON"
+        startFarm()
+    else
+        ToggleFarmBtn.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
+        ToggleFarmBtn.Text = "Farm OFF"
+    end
+end)
